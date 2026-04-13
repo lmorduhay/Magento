@@ -2,37 +2,102 @@
 
 ## Cursor Cloud specific instructions
 
-### Repository state
+### Codebase Overview
 
-This repository is intended for Magento (Adobe Commerce) AI research and development, as described in `README.md`. As of initial setup, **the repo contains no application code, dependency manifests, or configuration files** — only `README.md`.
+This is a **Magento 2 Open Source (2.4.7-p4)** e-commerce platform installation with the Luma theme. The codebase follows standard Magento 2 project structure installed via Composer from the Mage-OS mirror (no Adobe Marketplace keys required).
 
-### Environment notes
+### Available Skills
 
-- **Node.js** v22 is available via nvm (`$NVM_DIR` = `/home/ubuntu/.nvm`).
-- **Python 3.12** is available.
-- **PHP, Composer, MySQL, Nginx, Elasticsearch, and Docker are NOT pre-installed** in the base VM image. When Magento code is added, these will need to be installed (PHP 8.1+, Composer 2, MySQL 8.0 or MariaDB 10.6, Elasticsearch/OpenSearch, and a web server).
-- Docker is not available by default; see the cloud agent system instructions for the recommended Docker-in-Docker installation steps if needed.
+| Skill | File | Use When |
+|-------|------|----------|
+| **Magento Architect** | `.cursor/skills/magento-architect.md` | Designing architecture, planning modules, service contracts, DB schema, performance decisions |
+| **Magento Coder** | `.cursor/skills/magento-coder.md` | Writing PHP code, modules, business logic, tests, API endpoints, code reviews |
+| **Magento UX Designer** | `.cursor/skills/magento-ux-designer.md` | Frontend themes, layouts, templates, CSS/LESS, JavaScript, UI components |
 
-### When Magento code is added
+### Service Stack
 
-A typical Magento 2 development stack requires:
+| Service | Version | Start Command | Port |
+|---------|---------|---------------|------|
+| **PHP-FPM** | 8.2 | `sudo php-fpm8.2 --nodaemonize` | Unix socket `/run/php/php8.2-fpm.sock` |
+| **MySQL** | 8.0 | `sudo mysqld --user=mysql &` | 3306 (socket at `/var/run/mysqld/mysqld.sock`) |
+| **Elasticsearch** | 7.17 | `sudo -u elasticsearch ES_JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 /usr/share/elasticsearch/bin/elasticsearch` | 9200 |
+| **Nginx** | 1.24 | `sudo nginx -g "daemon off;"` | 80 |
 
-| Service | Notes |
-|---|---|
-| PHP 8.1+ with extensions (intl, gd, zip, soap, bcmath, etc.) | Core runtime |
-| Composer 2 | PHP dependency manager |
-| MySQL 8.0 / MariaDB 10.6 | Primary database |
-| Elasticsearch 7.x or OpenSearch | Required for catalog search since Magento 2.4 |
-| Nginx or Apache | Web server |
-| Redis (optional) | Session/cache backend |
-| RabbitMQ (optional) | Message queues |
+### Starting All Services
 
-Once code is committed, update the update script (`SetupVmEnvironment`) to run `composer install` (or equivalent) and update this file with concrete startup instructions.
+Run services in this order (each in a separate terminal or background):
+
+```bash
+# 1. MySQL
+sudo mkdir -p /var/run/mysqld && sudo chown mysql:mysql /var/run/mysqld
+sudo mysqld --user=mysql &
+sleep 3
+sudo chmod 755 /var/run/mysqld
+sudo mysql -e "SET GLOBAL log_bin_trust_function_creators = 1;"
+
+# 2. Elasticsearch
+sudo -u elasticsearch ES_JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 /usr/share/elasticsearch/bin/elasticsearch &
+
+# 3. PHP-FPM
+sudo php-fpm8.2 --nodaemonize &
+
+# 4. Nginx
+sudo nginx -g "daemon off;" &
+```
+
+Wait ~20 seconds for Elasticsearch to start, then verify: `curl -s http://localhost:9200`
+
+### Key URLs
+
+- **Storefront**: `http://localhost/`
+- **Admin Panel**: `http://localhost/admin_56u1a3p`
+- **Admin Credentials**: `admin` / `Admin123!`
+
+### Important Gotchas
+
+1. **MySQL socket permissions**: After starting MySQL, always run `sudo chmod 755 /var/run/mysqld` — the directory is created with restrictive permissions.
+2. **PHP-FPM runs as `ubuntu`**: The FPM pool is configured to run as the `ubuntu` user (not `www-data`) to avoid permission conflicts in development.
+3. **Nginx runs as `ubuntu`**: Same reason — `/etc/nginx/nginx.conf` is set to `user ubuntu;`.
+4. **Developer mode**: The installation is configured in developer mode — static assets and DI are generated on-the-fly.
+5. **Two-Factor Auth disabled**: `Magento_TwoFactorAuth` and `Magento_AdminAdobeImsTwoFactorAuth` are disabled for development convenience.
+6. **Magento installed from Mage-OS mirror**: Uses `https://mirror.mage-os.org/` as the Composer repository — no Adobe Marketplace auth keys needed.
+7. **`composer install` requires the mirror repo**: The `composer.json` includes the Mage-OS repository URL. Running `composer install` works without auth keys.
 
 ### Lint / Test / Build / Run
 
-No lint, test, build, or run commands are available yet. When Magento code is added:
-- **Lint**: `vendor/bin/phpcs`, `vendor/bin/phpstan`, or configured Magento coding standards
-- **Test**: `vendor/bin/phpunit` with Magento test suites
-- **Build**: `bin/magento setup:di:compile`, `bin/magento setup:static-content:deploy`
-- **Run**: Start web server + PHP-FPM, then access via browser
+```bash
+# Lint (PHP CodeSniffer with Magento standard)
+vendor/bin/phpcs --standard=Magento2 app/code/
+
+# Auto-fix lint issues
+vendor/bin/phpcbf --standard=Magento2 app/code/
+
+# Unit Tests
+vendor/bin/phpunit -c dev/tests/unit/phpunit.xml.dist app/code/Vendor/Module/Test/Unit/
+
+# Static Tests
+vendor/bin/phpunit -c dev/tests/static/phpunit.xml.dist
+
+# Compile DI
+php bin/magento setup:di:compile
+
+# Deploy Static Content
+php bin/magento setup:static-content:deploy -f en_US
+
+# Reindex
+php bin/magento indexer:reindex
+
+# Clear Cache
+php bin/magento cache:flush
+```
+
+### Custom Module Development
+
+Custom modules go in `app/code/<Vendor>/<Module>/`. After creating or modifying a module:
+
+```bash
+php bin/magento module:enable Vendor_Module
+php bin/magento setup:upgrade
+php bin/magento setup:di:compile
+php bin/magento cache:flush
+```
