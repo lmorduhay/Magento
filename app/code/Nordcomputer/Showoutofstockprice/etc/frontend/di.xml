@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="Magento\ConfigurableProduct\Pricing\Render\FinalPriceBox" type="Nordcomputer\Showoutofstockprice\Pricing\Render\FinalPriceBox" />
+    <type name="Magento\ConfigurableProduct\Model\ResourceModel\Product\LinkedProductSelectBuilder">
+        <arguments>
+            <argument name="baseSelectProcessor" xsi:type="object">Nordcomputer\Showoutofstockprice\Model\ConfigurableProduct\ResourceModel\Product\StockStatusBaseSelectProcessorN</argument>
+        </arguments>
+    </type>
+    <type name="Magento\ConfigurableProduct\Pricing\Price\ConfigurablePriceResolver">
+        <plugin name="show_price" type="Nordcomputer\Showoutofstockprice\Plugin\ShowPrice" sortOrder="1" disabled="false" />
+    </type>
+    <preference for="Magento\ConfigurableProduct\Helper\Data" type="Nordcomputer\Showoutofstockprice\ConfigurableProduct\Helper\Data\Data"/>
+    <type name="Magento\ConfigurableProduct\Block\Product\View\Type\Configurable">
+        <plugin name="ShowOutOfStockProducts" type="Nordcomputer\Showoutofstockprice\Plugin\ShowOutOfStockProductsPlugin" />
+    </type>
+    <type name="Magento\ConfigurableProduct\Model\ResourceModel\Attribute\OptionSelectBuilderInterface">
+        <plugin name="Magento_ConfigurableProduct_Plugin_Model_ResourceModel_Attribute_InStockOptionSelectBuilder" disabled="true" />
+        <plugin name="ShowAllProductSwatches" type="Nordcomputer\Showoutofstockprice\Plugin\InStockOptionSelectorPlugin"/>
+    </type>
+    <!-- Disable MSI plugin that filters out-of-stock children from getUsedProducts() -->
+    <type name="Magento\ConfigurableProduct\Model\Product\Type\Configurable">
+        <plugin name="is_option_salable" disabled="true" />
+    </type>
+    <!-- Disable MSI plugin that filters out-of-stock options from attribute select -->
+    <type name="Magento\ConfigurableProduct\Model\ResourceModel\Attribute\OptionSelectBuilderInterface">
+        <plugin name="Magento_ConfigurableProduct_Plugin_Model_ResourceModel_Attribute_InStockOptionSelectBuilder" disabled="true" />
+    </type>
+</config>
