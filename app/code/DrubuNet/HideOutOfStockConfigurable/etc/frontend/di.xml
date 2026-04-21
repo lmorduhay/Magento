@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Disable the MSI IsSalableOptionPlugin that strips OOS children from getUsedProducts -->
+    <type name="Magento\ConfigurableProduct\Model\Product\Type\Configurable">
+        <plugin name="is_option_salable" disabled="true" />
+    </type>
+
+    <!-- Wrap the Nordcomputer getOptions() to include OOS children and build salable array -->
+    <type name="Nordcomputer\Showoutofstockprice\ConfigurableProduct\Helper\Data\Data">
+        <plugin name="drubunet_fix_oos_options"
+                type="DrubuNet\HideOutOfStockConfigurable\Plugin\FixOutOfStockOptions"
+                sortOrder="10" />
+    </type>
+
+</config>
